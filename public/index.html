@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pandabutt</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 0;
+      margin: 0;
+    }
+
+    #main {
+      width: 80%;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 400px 1fr;
+      border-style: solid;
+      border-color: gray;
+      border-width: 0px 1px 1px 1px;
+    }
+
+    #left-bar {
+      padding: 10px;
+    }
+
+    #right-bar {
+      padding: 10px;
+      margin-left: 20px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 70px;
+    }
+
+
+    .post{
+      margin-bottom: 15px;
+      padding: 10px;
+      border-radius: 5px 5px;
+      box-shadow: 5px 5px 5px rgba(0,0,0,0.2);
+      background: #eef;
+    }
+
+    .post-author {
+      font-weight: bold;
+      display: flex;
+      gap: 8px;
+    }
+  </style>
+
+
+
+</head>
+
+<body>
+  <div id="main">
+    <div id="left-bar">
+        <div class="post-author">
+          <div class="avatar-here"></div>
+          <h3>New Post</h3>
+        </div>
+        <textarea id="post-text"></textarea>
+        <br>
+        <button id="post-button">Post</button>
+    </div>
+    <div id="right-bar">
+      <h1>Pandabutt</h1>
+      <div id="post-list"> 
+      </div>
+    </div>
+  </div>
+
+  <script src="main.js">
+   
+  </script>
+</body>
+
+</html>
