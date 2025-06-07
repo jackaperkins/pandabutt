@@ -2,6 +2,7 @@ mod backend;
 mod node;
 mod operation;
 mod topic;
+mod utils;
 
 use backend::Backend;
 use operation::ButtPost;
@@ -67,7 +68,7 @@ async fn main2() -> _ {
 
     println!("key {}", private_key);
 
-    let backend = Backend::new(private_key, data_directory.clone()).await;
+    let backend = Backend::new(private_key, data_directory.clone()).await.expect("backend up be startable");
     let state = Arc::new(Mutex::new(backend));
 
     let port = match name.as_str() {
