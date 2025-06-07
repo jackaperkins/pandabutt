@@ -5,7 +5,13 @@ Let's use [p2panda.org](https://p2panda.org/) to create a proof-of-concept quali
 ## Rationale
 SSB is a relatively simple model to base a proof-of-concept app on. In SSB peers have a single append-only log of operations like post, follow, block. There was however no fixed schema for the operations and many non-blog style applications were available in parallel. When syncing peers generally agreed to replicate operations from other peers so long as they were friends of their own friends. This "two-hop" distance protocol promoted network health and some simple discoverability while also preventing a lot of spam.
 
-## Plan
+## Next Steps
+- [x] Show pubkey-based identities in frontend
+- [ ] Rework app database to use sqlite with proper tables
+- [ ] Add UI for creating follow operations
+- [ ] Sync correctly based on following
+
+## Architecture
 
 ### Operation
 - **post** `string` - Messages posted by users
