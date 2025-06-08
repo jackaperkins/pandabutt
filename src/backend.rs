@@ -5,11 +5,14 @@ use crate::utils::CombinedMigrationSource;
 use p2panda_core::PublicKey;
 use p2panda_core::{Body, Header, PrivateKey};
 use p2panda_store::sqlite::store::{
-    connection_pool, create_database, migrations as operation_store_migrations,
+    connection_pool, create_database, migrations as operation_store_migrations, Pool,
 };
 use p2panda_store::{LocalOperationStore, LogStore, SqliteStore};
 use serde::{Deserialize, Serialize};
 use serde_json;
+use sqlx;
+use sqlx::sqlite::SqliteRow;
+use sqlx::Row;
 use sqlx::{migrate::Migrator, sqlite};
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash as StdHash;
@@ -25,103 +28,149 @@ use tokio::sync::{Mutex, RwLock};
 #[derive(Serialize, Deserialize, Clone, Debug, Copy, Eq, PartialEq, StdHash)]
 pub struct ButtLogId(pub PublicKey);
 
-pub type ButtStore = SqliteStore<ButtLogId, ButtExtensions>;
+pub type OperationStore = SqliteStore<ButtLogId, ButtExtensions>;
 
 #[derive(Clone, Debug)]
 pub struct AppData {
-    pub inner: Arc<RwLock<AppDataInner>>,
-    pub db_path: Arc<Mutex<String>>,
+    pub pool: sqlx::SqlitePool,
 }
 
-#[derive(Debug, Serialize, Deserialize, Default)]
-pub struct AppDataInner {
-    pub friends: HashMap<PublicKey, HashSet<PublicKey>>,
-    pub posts: HashMap<PublicKey, HashSet<ButtPost>>,
-}
+// #[derive(Debug)]
+// pub struct AppDataInner {
+//     // pub friends: HashMap<PublicKey, HashSet<PublicKey>>,
+//     // pub posts: HashMap<PublicKey, HashSet<ButtPost>>,
+//     pub pool: sqlx::SqlitePool
+// }
 
 impl AppData {
-    async fn new(save_directory: &String) -> Self {
-        let save_directory = format!("{}/appdb.json", save_directory);
-        let app = AppData {
-            inner: Arc::new(RwLock::new(AppDataInner {
-                friends: HashMap::new(),
-                posts: HashMap::new(),
-            })),
-            db_path: Arc::new(Mutex::new(save_directory.to_owned())),
-        };
-        app.load().await;
-        app
+    async fn new(connection_pool: Pool) -> Self {
+        AppData {
+            pool: connection_pool,
+        }
     }
 
-    async fn load(&self) {
-        let location = self.db_path.lock().await;
-        let location_path = std::path::Path::new(location.as_str());
-        let inner_from_file = match fs::read_to_string(location_path).await {
-            Ok(text) => serde_json::from_str::<AppDataInner>(&text).unwrap(),
-            Err(_) => Default::default(),
-        };
+    // async fn load(&self) {
+    //     let location = self.db_path.lock().await;
+    //     let location_path = std::path::Path::new(location.as_str());
+    //     let inner_from_file = match fs::read_to_string(location_path).await {
+    //         Ok(text) => serde_json::from_str::<AppDataInner>(&text).unwrap(),
+    //         Err(_) => Default::default(),
+    //     };
 
-        let mut inner = self.inner.write().await;
-        *inner = inner_from_file;
-    }
+    //     let mut inner = self.inner.write().await;
+    //     *inner = inner_from_file;
+    // }
 
-    async fn save(&self) {
-        // println!("saving");
-        let data = self.inner.read().await;
-        let output =
-            serde_json::to_string_pretty::<AppDataInner>(&data).expect("app data is serializable");
-        // println!("outout: {}", output);
-        drop(data);
-        let location = self.db_path.lock().await;
-        // println!("writing file to {}", location);
-        let location = std::path::Path::new(location.as_str());
-        fs::write(location, output).await.unwrap();
-    }
+    // async fn save(&self) {
+    //     // println!("saving");
+    //     let data = self.inner.read().await;
+    //     let output =
+    //         serde_json::to_string_pretty::<AppDataInner>(&data).expect("app data is serializable");
+    //     // println!("outout: {}", output);
+    //     drop(data);
+    //     let location = self.db_path.lock().await;
+    //     // println!("writing file to {}", location);
+    //     let location = std::path::Path::new(location.as_str());
+    //     fs::write(location, output).await.unwrap();
+    // }
 
     pub async fn materialize(&self, event: &ButtEvent, header: &Header<ButtExtensions>) {
         println!("Materializing event");
-        let mut app_data = self.inner.write().await;
+        // let mut app_data = self.inner.write().await;
         match event {
             ButtEvent::Follow(friend_key) => {
-                app_data
-                    .friends
-                    .entry(*friend_key)
-                    .and_modify(|public_keys| {
-                        public_keys.insert(*friend_key);
-                    });
-                // .or_insert(HashSet::from([friend_key]));
+                // app_data
+                //     .friends
+                //     .entry(*friend_key)
+                //     .and_modify(|public_keys| {
+                //         public_keys.insert(*friend_key);
+                //     });
             }
             ButtEvent::Post(body) => {
-                let post = ButtPost {
-                    body: body.clone(),
-                    public_key: header.public_key,
-                    id: header.hash(),
-                    timestamp: header.timestamp,
-                };
+                let result = sqlx::query(
+                    "
+                    INSERT OR IGNORE INTO posts ( id, public_key, timestamp, body )
+                    VALUES ( ?, ?, ?, ? )
+                    ",
+                )
+                .bind(header.hash().to_string())
+                .bind(header.public_key.to_string())
+                .bind(header.timestamp.to_string())
+                .bind(body)
+                .execute(&self.pool)
+                .await;
+                // let post = ButtPost {
+                //     body: body.clone(),
+                //     public_key: header.public_key,
+                //     id: header.hash(),
+                //     timestamp: header.timestamp,
+                // };
 
-                app_data
-                    .posts
-                    .entry(header.public_key)
-                    .and_modify(|posts| {
-                        posts.insert(post.clone());
-                    })
-                    .or_insert(HashSet::from([post]));
-                drop(app_data);
+                // app_data
+                //     .posts
+                //     .entry(header.public_key)
+                //     .and_modify(|posts| {
+                //         posts.insert(post.clone());
+                //     })
+                //     .or_insert(HashSet::from([post]));
+                // drop(app_data);
             }
         }
-        self.save().await;
+        // self.save().await;
     }
     // async fn add_friend(&self) {
     //     let store = self.inner.write().await;
     //     store.friends.insert(bla, blub);
     // }
+
+    pub async fn get_posts(&self) -> Vec<FrontendPost> {
+        let posts: Vec<SqliteRow> =
+            sqlx::query("SELECT id, public_key, timestamp, body FROM posts")
+                .fetch_all(&self.pool)
+                .await
+                .unwrap_or(vec![]);
+
+        posts
+            .iter()
+            .filter_map(|row| {
+                let Ok(id) = row.try_get::<String, _>("id") else {
+                    return None;
+                };
+                let Ok(public_key) = row.try_get::<String, _>("public_key") else {
+                    return None;
+                };
+                let Ok(timestamp) = row.try_get::<u64, _>("timestamp") else {
+                    return None;
+                };
+                let Ok(body) = row.try_get::<String, _>("body") else {
+                    return None;
+                };
+                Some(FrontendPost {
+                    id,
+                    public_key,
+                    timestamp,
+                    body
+                })
+            })
+            .collect()
+    }
+}
+
+#[derive(Serialize)]
+pub struct FrontendPost {
+    id: String,
+    public_key: String,
+    timestamp: u64,
+    body: String
+
 }
 
 pub struct Backend {
     #[allow(dead_code)]
     node: ButtNode,
     pub private_key: PrivateKey,
-    store: ButtStore,
+    store: OperationStore,
+    connection_pool: Pool,
     pub app_data: AppData,
 }
 
@@ -144,11 +193,11 @@ impl Backend {
         .run(&connection_pool)
         .await?;
 
-        let store = ButtStore::new(connection_pool);
+        let store = OperationStore::new(connection_pool.clone());
 
         let (tx, mut rx_from_sync) = mpsc::channel::<(Header<ButtExtensions>, Body)>(10000);
 
-        let app_data = AppData::new(&data_path).await;
+        let app_data = AppData::new(connection_pool.clone()).await;
         let topic_map = topic::ButtLogMap::new(store.clone(), app_data.clone());
 
         let public_key = private_key.public_key();
@@ -157,6 +206,7 @@ impl Backend {
             node: ButtNode::new(store.clone(), private_key.clone(), tx, topic_map.clone()).await,
             private_key,
             store: store.clone(),
+            connection_pool,
             app_data: app_data.clone(),
         };
 
@@ -177,7 +227,8 @@ impl Backend {
                     .await;
 
                 let butt_event = ButtEvent::from_bytes(body.to_bytes());
-                app_data.materialize(&butt_event, &header).await;
+                // materialize
+                app_data.materialize(&butt_event, &header);
             }
         });
 

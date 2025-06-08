@@ -21,13 +21,15 @@ use std::io::Read;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
+use crate::backend::FrontendPost;
+
 #[macro_use]
 extern crate rocket;
 
 #[get("/posts")]
-async fn api_posts(state: &State<Arc<Mutex<Backend>>>) -> Json<HashMap<PublicKey, HashSet<ButtPost>>> {
+async fn api_posts(state: &State<Arc<Mutex<Backend>>>) -> Json<Vec<FrontendPost>> {
     let backend = state.lock().await;
-    let posts = backend.app_data.inner.read().await.posts.clone();
+    let posts = backend.app_data.get_posts().await;
     Json(posts)
 }
 
@@ -68,7 +70,7 @@ async fn main2() -> _ {
 
     println!("key {}", private_key);
 
-    let backend = Backend::new(private_key, data_directory.clone()).await.expect("backend up be startable");
+    let backend = Backend::new(private_key, data_directory).await.expect("backend up be startable");
     let state = Arc::new(Mutex::new(backend));
 
     let port = match name.as_str() {

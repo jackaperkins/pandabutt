@@ -1,3 +1,4 @@
+// handle all the networking, sync and operation ingest
 
 use anyhow::Result;
 use p2panda_core::{cbor::decode_cbor, Body, Hash, Header, PrivateKey};
@@ -12,7 +13,7 @@ use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::StreamExt;
 
 use crate::{
-    backend::ButtStore,
+    backend::OperationStore,
     operation::{encode_gossip_operation, ButtExtensions},
     topic::{ButtLogMap, ButtQuery},
 };
@@ -25,7 +26,7 @@ pub struct ButtNode {
 
 impl ButtNode {
     pub async fn new(
-        store: ButtStore,
+        store: OperationStore,
         private_key: PrivateKey,
         backend_tx: mpsc::Sender<(Header<ButtExtensions>, Body)>,
         topic_map: ButtLogMap,
@@ -46,7 +47,6 @@ impl ButtNode {
             .unwrap();
 
         let (gossip_tx, rx, gossip_ready) = network.subscribe(ButtQuery { hops: 1 }).await.unwrap();
-
 
         let backend_copy = backend_tx.clone();
         task::spawn(async move {

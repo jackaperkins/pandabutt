@@ -5,7 +5,7 @@ use p2panda_net::TopicId;
 use p2panda_sync::{log_sync::TopicLogMap, TopicQuery};
 use serde::{Deserialize, Serialize};
 
-use crate::backend::{AppData, ButtLogId, ButtStore};
+use crate::backend::{AppData, ButtLogId, OperationStore};
 
 type Logs = HashMap<PublicKey, Vec<ButtLogId>>;
 
@@ -25,12 +25,12 @@ impl TopicId for ButtQuery {
 #[derive(Debug, Clone)]
 pub struct ButtLogMap {
     #[allow(unused)]
-    store: ButtStore,
+    store: OperationStore,
     app_data: AppData
 }
 
 impl ButtLogMap {
-    pub fn new(s: ButtStore, app_data: AppData) -> Self {
+    pub fn new(s: OperationStore, app_data: AppData) -> Self {
         ButtLogMap {
             store: s,
             app_data
@@ -42,12 +42,13 @@ impl ButtLogMap {
 impl TopicLogMap<ButtQuery, ButtLogId> for ButtLogMap {
     async fn get(&self, _topic: &ButtQuery) -> Option<Logs> {
         // self.store
-        let app_data = self.app_data.inner.read().await;
-        let public_keys = app_data.posts.keys();
-        let mut result = HashMap::new();
-        for public_key in public_keys {
-            result.insert(*public_key, vec![ButtLogId(*public_key)]);
-        }
-        Some(result)
+        // let app_data = self.app_data.inner.read().await;
+        // let public_keys: Vec<String> = vec![];//pp_data.posts.keys();
+        // let mut result = HashMap::new();
+        // for public_key in public_keys {
+        //     result.insert(*public_key, vec![ButtLogId(*public_key)]);
+        // }
+        // Some(result)
+        None
     }
 }
