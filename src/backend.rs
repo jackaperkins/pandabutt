@@ -3,6 +3,7 @@ use crate::operation::{ButtEvent, ButtExtensions};
 use crate::topic;
 use crate::utils::CombinedMigrationSource;
 
+use anyhow::Result;
 use p2panda_core::PublicKey;
 use p2panda_core::{Body, Header, PrivateKey};
 use p2panda_store::sqlite::store::{
@@ -16,7 +17,6 @@ use sqlx::Row;
 use std::hash::Hash as StdHash;
 use std::time::SystemTime;
 use tokio::sync::mpsc::{self};
-use anyhow::Result;
 
 #[derive(Serialize, Deserialize, Clone, Debug, Copy, Eq, PartialEq, StdHash)]
 pub struct ButtLogId(pub PublicKey);

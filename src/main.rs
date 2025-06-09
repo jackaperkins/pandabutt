@@ -33,15 +33,16 @@ async fn api_posts(state: &State<Arc<Mutex<Backend>>>) -> Json<Vec<FrontendPost>
 
 #[derive(Serialize)]
 struct Identity {
-    public_key: PublicKey
+    public_key: PublicKey,
 }
 
 #[get("/id")]
 async fn api_id(state: &State<Arc<Mutex<Backend>>>) -> Json<Identity> {
     let backend = state.lock().await;
-    Json(Identity { public_key: backend.private_key.public_key()})
+    Json(Identity {
+        public_key: backend.private_key.public_key(),
+    })
 }
-
 
 #[derive(Deserialize, Debug)]
 struct PostBodyInput {
@@ -49,7 +50,10 @@ struct PostBodyInput {
 }
 
 #[post("/post", data = "<input>")]
-async fn api_make_post(input: Json<PostBodyInput>, state: &State<Arc<Mutex<Backend>>>) -> &'static str {
+async fn api_make_post(
+    input: Json<PostBodyInput>,
+    state: &State<Arc<Mutex<Backend>>>,
+) -> &'static str {
     let mut backend = state.lock().await;
 
     backend.create_post(input.body.to_owned()).await;
@@ -68,7 +72,9 @@ async fn main2() -> _ {
 
     println!("key {}", private_key);
 
-    let backend = Backend::new(private_key, data_directory).await.expect("backend up be startable");
+    let backend = Backend::new(private_key, data_directory)
+        .await
+        .expect("backend up be startable");
     let state = Arc::new(Mutex::new(backend));
 
     let port = match name.as_str() {

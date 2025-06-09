@@ -21,7 +21,7 @@ use crate::{
 pub struct ButtNode {
     #[allow(unused)]
     network: Network<ButtQuery>,
-    gossip_tx: Sender<ToNetwork>
+    gossip_tx: Sender<ToNetwork>,
 }
 
 impl ButtNode {
@@ -77,7 +77,7 @@ impl ButtNode {
                     Ok(operation) => {
                         println!("decoded operation ok in filter_map stream");
                         Some(operation)
-                    },
+                    }
                     Err(err) => {
                         error!("decode operation error: {err}");
                         None
@@ -116,12 +116,13 @@ impl ButtNode {
         ButtNode { network, gossip_tx }
     }
 
-    pub async fn send_gossip (&self, header :Header<ButtExtensions>, body:Body) {
+    pub async fn send_gossip(&self, header: Header<ButtExtensions>, body: Body) {
         let encoded = encode_gossip_operation(header.clone(), Some(body.clone())).unwrap();
-        let message = ToNetwork::Message {
-            bytes: encoded
-        };
-        println!("gossiping about a new operation to my friends {}", header.hash());
+        let message = ToNetwork::Message { bytes: encoded };
+        println!(
+            "gossiping about a new operation to my friends {}",
+            header.hash()
+        );
         let _ = self.gossip_tx.send(message).await;
     }
 }
