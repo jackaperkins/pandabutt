@@ -5,7 +5,6 @@ mod topic;
 mod utils;
 
 use backend::Backend;
-use operation::ButtPost;
 use p2panda_core::PrivateKey;
 use p2panda_core::PublicKey;
 use rocket::config::LogLevel;
@@ -14,7 +13,6 @@ use rocket::serde::json::Json;
 use rocket::State;
 use serde::Deserialize;
 use serde::Serialize;
-use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fs;
 use std::io::Read;

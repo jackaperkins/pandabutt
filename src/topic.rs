@@ -26,29 +26,23 @@ impl TopicId for ButtQuery {
 pub struct ButtLogMap {
     #[allow(unused)]
     store: OperationStore,
-    app_data: AppData
+    app_data: AppData,
 }
 
 impl ButtLogMap {
     pub fn new(s: OperationStore, app_data: AppData) -> Self {
-        ButtLogMap {
-            store: s,
-            app_data
-        }
+        ButtLogMap { store: s, app_data }
     }
 }
 
 #[async_trait]
 impl TopicLogMap<ButtQuery, ButtLogId> for ButtLogMap {
     async fn get(&self, _topic: &ButtQuery) -> Option<Logs> {
-        // self.store
-        // let app_data = self.app_data.inner.read().await;
-        // let public_keys: Vec<String> = vec![];//pp_data.posts.keys();
-        // let mut result = HashMap::new();
-        // for public_key in public_keys {
-        //     result.insert(*public_key, vec![ButtLogId(*public_key)]);
-        // }
-        // Some(result)
-        None
+        let mut result = HashMap::new();
+        let keys = self.app_data.get_all_keys().await;
+        for public_key in keys {
+            result.insert(public_key, vec![ButtLogId(public_key)]);
+        }
+        Some(result)
     }
 }

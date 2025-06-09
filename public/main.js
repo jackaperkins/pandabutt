@@ -34,11 +34,12 @@ function avatar(key) {
   const response = await fetch("/posts")
   const data = await response.json()
 
-  for (logId of Object.keys(data)) {
-    for (operation of data[logId]) {
-      posts.push(operation)
-    }
-  }
+  posts = data
+  // for (logId of Object.keys(data)) {
+  //   for (operation of data[logId]) {
+  //     posts.push(operation)
+  //   }
+  // }
 
   posts = posts.sort((a, b) => {
     if (a.timestamp < b.timestamp) {
@@ -61,6 +62,7 @@ function avatar(key) {
           ${p.public_key.slice(0, 9)} ${identity.public_key === p.public_key ? '(Me)' : ''}
         </div>
         <div>
+          ${p.timestamp} - 
           ${new Date(p.timestamp)}<br>
       </div>
      </div>

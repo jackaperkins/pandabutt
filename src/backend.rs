@@ -1,5 +1,5 @@
 use crate::node::ButtNode;
-use crate::operation::{ButtEvent, ButtExtensions, ButtPost};
+use crate::operation::{ButtEvent, ButtExtensions};
 use crate::topic;
 use crate::utils::CombinedMigrationSource;
 use p2panda_core::PublicKey;
@@ -9,21 +9,15 @@ use p2panda_store::sqlite::store::{
 };
 use p2panda_store::{LocalOperationStore, LogStore, SqliteStore};
 use serde::{Deserialize, Serialize};
-use serde_json;
 use sqlx;
+use sqlx::migrate::Migrator;
 use sqlx::sqlite::SqliteRow;
 use sqlx::Row;
-use sqlx::{migrate::Migrator, sqlite};
-use std::collections::{HashMap, HashSet};
 use std::hash::Hash as StdHash;
-use std::sync::Arc;
 use std::time::SystemTime;
 use tokio::sync::mpsc::{self};
 
 use anyhow::Result;
-
-use tokio::fs;
-use tokio::sync::{Mutex, RwLock};
 
 #[derive(Serialize, Deserialize, Clone, Debug, Copy, Eq, PartialEq, StdHash)]
 pub struct ButtLogId(pub PublicKey);
@@ -35,13 +29,6 @@ pub struct AppData {
     pub pool: sqlx::SqlitePool,
 }
 
-// #[derive(Debug)]
-// pub struct AppDataInner {
-//     // pub friends: HashMap<PublicKey, HashSet<PublicKey>>,
-//     // pub posts: HashMap<PublicKey, HashSet<ButtPost>>,
-//     pub pool: sqlx::SqlitePool
-// }
-
 impl AppData {
     async fn new(connection_pool: Pool) -> Self {
         AppData {
@@ -49,36 +36,10 @@ impl AppData {
         }
     }
 
-    // async fn load(&self) {
-    //     let location = self.db_path.lock().await;
-    //     let location_path = std::path::Path::new(location.as_str());
-    //     let inner_from_file = match fs::read_to_string(location_path).await {
-    //         Ok(text) => serde_json::from_str::<AppDataInner>(&text).unwrap(),
-    //         Err(_) => Default::default(),
-    //     };
-
-    //     let mut inner = self.inner.write().await;
-    //     *inner = inner_from_file;
-    // }
-
-    // async fn save(&self) {
-    //     // println!("saving");
-    //     let data = self.inner.read().await;
-    //     let output =
-    //         serde_json::to_string_pretty::<AppDataInner>(&data).expect("app data is serializable");
-    //     // println!("outout: {}", output);
-    //     drop(data);
-    //     let location = self.db_path.lock().await;
-    //     // println!("writing file to {}", location);
-    //     let location = std::path::Path::new(location.as_str());
-    //     fs::write(location, output).await.unwrap();
-    // }
-
     pub async fn materialize(&self, event: &ButtEvent, header: &Header<ButtExtensions>) {
         println!("Materializing event");
-        // let mut app_data = self.inner.write().await;
         match event {
-            ButtEvent::Follow(friend_key) => {
+            ButtEvent::Follow(_) => {
                 // app_data
                 //     .friends
                 //     .entry(*friend_key)
@@ -87,7 +48,7 @@ impl AppData {
                 //     });
             }
             ButtEvent::Post(body) => {
-                let result = sqlx::query(
+                let _result = sqlx::query(
                     "
                     INSERT OR IGNORE INTO posts ( id, public_key, timestamp, body )
                     VALUES ( ?, ?, ?, ? )
@@ -118,10 +79,6 @@ impl AppData {
         }
         // self.save().await;
     }
-    // async fn add_friend(&self) {
-    //     let store = self.inner.write().await;
-    //     store.friends.insert(bla, blub);
-    // }
 
     pub async fn get_posts(&self) -> Vec<FrontendPost> {
         let posts: Vec<SqliteRow> =
@@ -149,8 +106,24 @@ impl AppData {
                     id,
                     public_key,
                     timestamp,
-                    body
+                    body,
                 })
+            })
+            .collect()
+    }
+
+    pub async fn get_all_keys(&self) -> Vec<PublicKey> {
+        let unique_keys: Vec<SqliteRow> = sqlx::query("SELECT DISTINCT public_key FROM posts")
+            .fetch_all(&self.pool)
+            .await
+            .unwrap_or(vec![]);
+        unique_keys
+            .iter()
+            .filter_map(|row| {
+                let Ok(public_key) = row.try_get::<&[u8], _>("public_key") else {
+                    return None;
+                };
+                PublicKey::try_from(public_key).ok()
             })
             .collect()
     }
@@ -161,8 +134,7 @@ pub struct FrontendPost {
     id: String,
     public_key: String,
     timestamp: u64,
-    body: String
-
+    body: String,
 }
 
 pub struct Backend {
@@ -170,7 +142,6 @@ pub struct Backend {
     node: ButtNode,
     pub private_key: PrivateKey,
     store: OperationStore,
-    connection_pool: Pool,
     pub app_data: AppData,
 }
 
@@ -206,7 +177,6 @@ impl Backend {
             node: ButtNode::new(store.clone(), private_key.clone(), tx, topic_map.clone()).await,
             private_key,
             store: store.clone(),
-            connection_pool,
             app_data: app_data.clone(),
         };
 
@@ -227,8 +197,7 @@ impl Backend {
                     .await;
 
                 let butt_event = ButtEvent::from_bytes(body.to_bytes());
-                // materialize
-                app_data.materialize(&butt_event, &header);
+                app_data.materialize(&butt_event, &header).await;
             }
         });
 
