@@ -90,7 +90,7 @@ async fn main2() -> _ {
 }
 
 fn get_key(dir: &String) -> PrivateKey {
-    let _ = fs::DirBuilder::new().create(&dir);
+    let _ = fs::DirBuilder::new().create(dir);
     let file_path = format!("{}/key", dir);
 
     if let Ok(mut file) = fs::File::open(&file_path) {

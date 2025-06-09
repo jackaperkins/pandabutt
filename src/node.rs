@@ -92,8 +92,6 @@ impl ButtNode {
                     }
                 });
 
-            // let documents_store = network_inner.documents_store.clone();
-
             tokio::task::spawn(async move {
                 // Process the operations and forward application messages to app layer.
                 while let Some(operation) = stream.next().await {

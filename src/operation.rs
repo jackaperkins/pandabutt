@@ -6,25 +6,27 @@ use p2panda_core::{Hash, PublicKey};
 use serde::{Deserialize, Serialize};
 use std::hash::Hash as StdHash;
 
-
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ButtExtensions {
-    pub prune_flag:PruneFlag
+    pub prune_flag: PruneFlag,
 }
 
 impl Default for ButtExtensions {
     fn default() -> Self {
-        ButtExtensions{ 
-            prune_flag: PruneFlag::new(false)
+        ButtExtensions {
+            prune_flag: PruneFlag::new(false),
         }
     }
 }
 
 impl Extension<PruneFlag> for ButtExtensions {
     fn extract(header: &Header<Self>) -> Option<PruneFlag> {
-        header.extensions.as_ref().map(|extensions| extensions.prune_flag.clone())
+        header
+            .extensions
+            .as_ref()
+            .map(|extensions| extensions.prune_flag.clone())
     }
-}  
+}
 
 impl Extension<ButtLogId> for ButtExtensions {
     fn extract(header: &Header<Self>) -> Option<ButtLogId> {
@@ -54,7 +56,6 @@ impl ButtEvent {
         serde_json::from_slice(&bytes).unwrap()
     }
 }
-
 
 pub fn encode_gossip_operation<E>(header: Header<E>, body: Option<Body>) -> Result<Vec<u8>>
 where

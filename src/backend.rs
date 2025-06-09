@@ -2,6 +2,7 @@ use crate::node::ButtNode;
 use crate::operation::{ButtEvent, ButtExtensions};
 use crate::topic;
 use crate::utils::CombinedMigrationSource;
+
 use p2panda_core::PublicKey;
 use p2panda_core::{Body, Header, PrivateKey};
 use p2panda_store::sqlite::store::{
@@ -9,14 +10,12 @@ use p2panda_store::sqlite::store::{
 };
 use p2panda_store::{LocalOperationStore, LogStore, SqliteStore};
 use serde::{Deserialize, Serialize};
-use sqlx;
 use sqlx::migrate::Migrator;
 use sqlx::sqlite::SqliteRow;
 use sqlx::Row;
 use std::hash::Hash as StdHash;
 use std::time::SystemTime;
 use tokio::sync::mpsc::{self};
-
 use anyhow::Result;
 
 #[derive(Serialize, Deserialize, Clone, Debug, Copy, Eq, PartialEq, StdHash)]
@@ -148,13 +147,12 @@ pub struct Backend {
 impl Backend {
     pub async fn new(private_key: PrivateKey, data_path: String) -> Result<Self> {
         let operation_db_path = format!("{}/operations.db", data_path);
-        println!("expected db path: '{}'", &operation_db_path);
         create_database(&operation_db_path)
             .await
             .expect("database file created");
         let connection_pool = connection_pool(&operation_db_path, 4)
             .await
-            .expect(&format!("database to exist at {}", &operation_db_path));
+            .unwrap_or_else(|_| panic!("database to exist at {}", &operation_db_path));
 
         Migrator::new(CombinedMigrationSource::new(vec![
             operation_store_migrations(),

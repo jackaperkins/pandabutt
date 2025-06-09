@@ -7,7 +7,7 @@ SSB is a relatively simple model to base a proof-of-concept app on. In SSB peers
 
 ## Next Steps
 - [x] Show pubkey-based identities in frontend
-- [ ] Rework app database to use sqlite with proper tables
+- [x] Rework app database to use sqlite with proper tables
 - [ ] Add UI for creating follow operations
 - [ ] Sync correctly based on following
 
